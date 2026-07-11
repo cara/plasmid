@@ -1,0 +1,54 @@
+{
+  "name": "@cara/plasmid",
+  "version": "0.1.0",
+  "description": "Dependency-free plasmid map renderer — turn a DNA sequence or FASTA/GenBank file into a standalone circular-map SVG. Runs in Node and the browser.",
+  "keywords": [
+    "plasmid",
+    "dna",
+    "svg",
+    "bioinformatics",
+    "genbank",
+    "fasta",
+    "molecular-biology",
+    "visualization"
+  ],
+  "license": "MIT",
+  "author": "cara",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cara/plasmid.git"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
