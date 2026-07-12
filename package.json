@@ -1,6 +1,6 @@
 {
   "name": "@cara/plasmid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dependency-free plasmid map renderer — turn a DNA sequence or FASTA/GenBank file into a standalone circular-map SVG. Runs in Node and the browser.",
   "keywords": [
     "plasmid",
