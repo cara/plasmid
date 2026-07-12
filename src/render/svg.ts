@@ -26,6 +26,8 @@ function line(p1: Point, p2: Point, stroke: string, width: number): string {
 
 interface Laid {
   feature: Feature;
+  /** Index of the feature in the input record.features array. */
+  index: number;
   startAngle: number;
   arcLen: number;
   lane: number;
@@ -109,10 +111,11 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
 
   if ((opts.showFeatures ?? true) && features.length > 0 && length > 0) {
     const laid: Laid[] = features
-      .filter((ft) => ft.start >= 1 && ft.start <= length)
-      .map((ft) => {
+      .map((ft, index) => ({ ft, index }))
+      .filter((x) => x.ft.start >= 1 && x.ft.start <= length)
+      .map(({ ft, index }) => {
         const { startAngle, arcLen } = spanToArc(ft.start, ft.end, length, circular);
-        return { feature: ft, startAngle, arcLen, lane: 0 };
+        return { feature: ft, index, startAngle, arcLen, lane: 0 };
       });
 
     const laneCount = assignLanes(laid);
@@ -128,7 +131,11 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
       const headDeg = Math.min(7, it.arcLen / 2);
       const d = arcBandPath(cx, cy, innerR, outerR, it.startAngle, it.arcLen, headAt, headDeg);
       parts.push(
-        `<path d="${d}" fill="${col.fill}" stroke="${col.border}" stroke-width="1" stroke-linejoin="round"><title>${esc(it.feature.name)} (${it.feature.start}–${it.feature.end})</title></path>`
+        `<path class="feature" data-fi="${it.index}" data-name="${esc(it.feature.name)}"` +
+          ` data-type="${esc(it.feature.type ?? '')}" data-start="${it.feature.start}"` +
+          ` data-end="${it.feature.end}" data-strand="${it.feature.strand ?? 0}"` +
+          ` d="${d}" fill="${col.fill}" stroke="${col.border}" stroke-width="1"` +
+          ` stroke-linejoin="round"><title>${esc(it.feature.name)} (${it.feature.start}–${it.feature.end})</title></path>`
       );
 
       const midAngle = normAngle(it.startAngle + it.arcLen / 2);
