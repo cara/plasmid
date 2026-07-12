@@ -116,11 +116,11 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
       });
 
     const laneCount = assignLanes(laid);
-    const laneW = Math.min(24, (radius - 60) / Math.max(1, laneCount));
-    const band = Math.max(9, laneW - 6);
+    const laneW = Math.min(30, (radius - 52) / Math.max(1, laneCount));
+    const band = Math.max(13, laneW - 4);
 
     for (const it of laid) {
-      const outerR = radius - 34 - it.lane * laneW;
+      const outerR = radius - 28 - it.lane * laneW;
       const innerR = outerR - band;
       const col = featureColor(it.feature.name, it.feature.type);
       const strand = it.feature.strand ?? 0;
@@ -167,25 +167,24 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
     }
   }
 
-  // ---- external feature labels (leader lines, stacked per hemisphere) ----
-  parts.push(...layoutExternalLabels(externalLabels, cx, cy, radius, size));
-
-  // ---- restriction cutters ----
+  // ---- restriction cutters: tick marks now; labels merged with feature labels
+  // below so a cutter label never overlaps a feature label ----
   if ((opts.showCutters ?? true) && length > 0) {
     const enzymes = opts.enzymes ?? DEFAULT_ENZYMES;
     const cutters = findCutters(seq, circular, enzymes, opts.maxCutFrequency ?? 1);
-    const cutLabels: Array<{ angle: number; anchorR: number; text: string; color: string }> = [];
     for (const c of cutters) {
       for (const pos of c.positions) {
         const angle = (pos / length) * 360;
         const p1 = pointOnCircle(cx, cy, radius - 2, angle);
         const p2 = pointOnCircle(cx, cy, radius + 10, angle);
         parts.push(line(p1, p2, '#5f6368', 1));
-        cutLabels.push({ angle, anchorR: radius + 10, text: `${c.enzyme} (${pos + 1})`, color: '#3c4043' });
+        externalLabels.push({ angle, anchorR: radius + 10, text: `${c.enzyme} (${pos + 1})`, color: '#3c4043' });
       }
     }
-    parts.push(...layoutExternalLabels(cutLabels, cx, cy, radius + 12, size, true));
   }
+
+  // ---- external labels: feature + cutter labels de-collided together ----
+  parts.push(...layoutExternalLabels(externalLabels, cx, cy, radius, size));
 
   // ---- centre title ----
   const title = esc(opts.title ?? record.name ?? 'plasmid');
