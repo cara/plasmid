@@ -154,7 +154,7 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
         }
         defs.push(`<path id="${id}" d="${dPath}" fill="none"/>`);
         parts.push(
-          `<text font-size="11" fill="${col.border}" font-family="sans-serif" font-weight="600"><textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(it.feature.name)}</textPath></text>`
+          `<text font-size="11" fill="${col.border}" font-family="sans-serif" font-weight="600" dominant-baseline="central"><textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(it.feature.name)}</textPath></text>`
         );
       } else if (it.arcLen >= 3) {
         externalLabels.push({
