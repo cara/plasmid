@@ -114,6 +114,33 @@ describe('SVG rendering', () => {
     expect(svg).toContain('2,000 bp');
   });
 
+  it('wraps a long title onto multiple centred lines', () => {
+    const longName = 'pSpCas9(BB)-2A-GFP-PX458 super long variant name here';
+    const svg = renderPlasmidSVG({ ...record, name: longName });
+    const lines = [...svg.matchAll(/font-weight="700"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    expect(lines.length).toBeGreaterThan(1);
+    // Reassembling the wrapped lines reproduces the original name.
+    expect(lines.join(' ').replace(/\s+/g, ' ')).toContain('pSpCas9');
+    expect(lines.join('')).toContain('PX458');
+    // A short title stays on a single line.
+    const shortSvg = renderPlasmidSVG({ ...record, name: 'pUC19' });
+    const shortLines = [...shortSvg.matchAll(/font-weight="700"[^>]*>([^<]*)</g)];
+    expect(shortLines).toHaveLength(1);
+  });
+
+  it('wraps a dot-separated AAV name at the dots', () => {
+    const dotName = 'pAAV.CBA.loxP.ArcLightD.2A.nlsmCherry.loxP.WPRE.SV40';
+    const svg = renderPlasmidSVG({ ...record, name: dotName });
+    const lines = [...svg.matchAll(/font-weight="700"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    expect(lines.length).toBeGreaterThan(1);
+    // Reassembling the wrapped lines reproduces the original name.
+    expect(lines.join('')).toBe(dotName);
+    // Breaks land after a dot, not mid-token.
+    for (const line of lines.slice(0, -1)) {
+      expect(line.endsWith('.')).toBe(true);
+    }
+  });
+
   it('renders each feature as a colored path', () => {
     const svg = renderPlasmidSVG(record);
     const paths = svg.match(/<path /g) ?? [];
