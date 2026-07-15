@@ -36,8 +36,10 @@ function wrapTitle(text: string, maxWidth: number, fontSize: number): string[] {
   const maxChars = Math.max(4, Math.floor(maxWidth / charW));
   if (text.length <= maxChars) return [text];
   // Keep each separator attached to the preceding chunk so a break lands
-  // *after* the "-" / "_" / ")" rather than orphaning it onto the next line.
-  const chunks = text.match(/[^\s_)\-]+[\s_)\-]*/g) ?? [text];
+  // *after* the "-" / "_" / ")" / "." rather than orphaning it onto the next
+  // line. Dots matter for AAV-style names (e.g. "pAAV.CBA.loxP.WPRE.SV40")
+  // which are otherwise a single unbreakable token.
+  const chunks = text.match(/[^\s_).\-]+[\s_).\-]*/g) ?? [text];
   const lines: string[] = [];
   let line = '';
   for (let chunk of chunks) {

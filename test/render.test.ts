@@ -128,6 +128,19 @@ describe('SVG rendering', () => {
     expect(shortLines).toHaveLength(1);
   });
 
+  it('wraps a dot-separated AAV name at the dots', () => {
+    const dotName = 'pAAV.CBA.loxP.ArcLightD.2A.nlsmCherry.loxP.WPRE.SV40';
+    const svg = renderPlasmidSVG({ ...record, name: dotName });
+    const lines = [...svg.matchAll(/font-weight="700"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    expect(lines.length).toBeGreaterThan(1);
+    // Reassembling the wrapped lines reproduces the original name.
+    expect(lines.join('')).toBe(dotName);
+    // Breaks land after a dot, not mid-token.
+    for (const line of lines.slice(0, -1)) {
+      expect(line.endsWith('.')).toBe(true);
+    }
+  });
+
   it('renders each feature as a colored path', () => {
     const svg = renderPlasmidSVG(record);
     const paths = svg.match(/<path /g) ?? [];
