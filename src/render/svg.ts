@@ -24,6 +24,43 @@ function line(p1: Point, p2: Point, stroke: string, width: number): string {
   return `<line x1="${p1[0].toFixed(2)}" y1="${p1[1].toFixed(2)}" x2="${p2[0].toFixed(2)}" y2="${p2[1].toFixed(2)}" stroke="${stroke}" stroke-width="${width}"/>`;
 }
 
+/**
+ * Wrap a plasmid title into lines that fit within `maxWidth` px. Names are
+ * often long single tokens (e.g. "pSpCas9(BB)-2A-GFP-PX458"), so we break
+ * after separators (space, "-", "_", ")") as well as between words, and
+ * hard-break any remaining run that is still too wide. Width is estimated from
+ * an average glyph ratio since the renderer has no DOM to measure real text.
+ */
+function wrapTitle(text: string, maxWidth: number, fontSize: number): string[] {
+  const charW = fontSize * 0.58; // approx avg glyph width for the serif title
+  const maxChars = Math.max(4, Math.floor(maxWidth / charW));
+  if (text.length <= maxChars) return [text];
+  // Keep each separator attached to the preceding chunk so a break lands
+  // *after* the "-" / "_" / ")" rather than orphaning it onto the next line.
+  const chunks = text.match(/[^\s_)\-]+[\s_)\-]*/g) ?? [text];
+  const lines: string[] = [];
+  let line = '';
+  for (let chunk of chunks) {
+    // A single chunk wider than a full line: hard-break it.
+    while (chunk.length > maxChars) {
+      const take = maxChars - line.length;
+      if (take > 0) {
+        line += chunk.slice(0, take);
+        chunk = chunk.slice(take);
+      }
+      lines.push(line.trimEnd());
+      line = '';
+    }
+    if (line.length > 0 && line.length + chunk.length > maxChars) {
+      lines.push(line.trimEnd());
+      line = '';
+    }
+    line += chunk;
+  }
+  if (line.trim()) lines.push(line.trimEnd());
+  return lines;
+}
+
 interface Laid {
   feature: Feature;
   /** Index of the feature in the input record.features array. */
@@ -109,6 +146,11 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
 
   const externalLabels: Array<{ angle: number; anchorR: number; text: string; color: string }> = [];
 
+  // Innermost radius still clear of feature bands. The centre title must fit
+  // inside this zone, otherwise a long name overlaps the structures. Updated
+  // to the deepest lane once the feature layout is known below.
+  let innerClearR = radius - 28;
+
   if ((opts.showFeatures ?? true) && features.length > 0 && length > 0) {
     const laid: Laid[] = features
       .map((ft, index) => ({ ft, index }))
@@ -121,6 +163,7 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
     const laneCount = assignLanes(laid);
     const laneW = Math.min(30, (radius - 52) / Math.max(1, laneCount));
     const band = Math.max(13, laneW - 4);
+    innerClearR = radius - 28 - (laneCount - 1) * laneW - band;
 
     for (const it of laid) {
       const outerR = radius - 28 - it.lane * laneW;
@@ -193,11 +236,39 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
   // ---- external labels: feature + cutter labels de-collided together ----
   parts.push(...layoutExternalLabels(externalLabels, cx, cy, radius, size));
 
-  // ---- centre title ----
-  const title = esc(opts.title ?? record.name ?? 'plasmid');
+  // ---- centre title (wrapped + recentred to fit the clear inner zone) ----
+  const rawTitle = opts.title ?? record.name ?? 'plasmid';
+  const subtitle = `${length.toLocaleString()} bp${circular ? '' : ' · linear'}`;
+  // Constrain the title to the clear inner circle so it never overlaps the
+  // feature bands; keep a small readable floor for pathological many-lane maps.
+  const maxTitleW = Math.max(96, innerClearR * 2 * 0.85);
+  let titleSize = 20;
+  let subSize = 14;
+  let subGap = 22;
+  const titleLines = wrapTitle(rawTitle, maxTitleW, titleSize);
+  let lineH = titleSize * 1.15;
+  let blockH = titleLines.length * lineH + subGap;
+  // If the stacked block is taller than the clear zone, shrink it uniformly so
+  // the whole title still fits vertically inside the inner circle.
+  const maxBlockH = innerClearR * 2 * 0.9;
+  if (blockH > maxBlockH) {
+    const s = Math.max(0.5, maxBlockH / blockH);
+    titleSize *= s;
+    subSize *= s;
+    subGap *= s;
+    lineH *= s;
+    blockH *= s;
+  }
+  // Baseline of the first title line, so the block is vertically centred on cy.
+  let ty = cy - blockH / 2 + titleSize;
+  for (const ln of titleLines) {
+    parts.push(
+      `<text x="${cx}" y="${ty.toFixed(2)}" font-size="${titleSize.toFixed(2)}" font-weight="700" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" fill="#202124">${esc(ln)}</text>`
+    );
+    ty += lineH;
+  }
   parts.push(
-    `<text x="${cx}" y="${cy - 6}" font-size="20" font-weight="700" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" fill="#202124">${title}</text>`,
-    `<text x="${cx}" y="${cy + 16}" font-size="14" text-anchor="middle" font-family="Georgia, serif" fill="#5f6368">${length.toLocaleString()} bp${circular ? '' : ' · linear'}</text>`
+    `<text x="${cx}" y="${ty.toFixed(2)}" font-size="${subSize.toFixed(2)}" text-anchor="middle" font-family="Georgia, serif" fill="#5f6368">${esc(subtitle)}</text>`
   );
 
   return (
