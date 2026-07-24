@@ -37,7 +37,11 @@ const KEYWORD_HUE: Array<[RegExp, number]> = [
 ];
 
 export function featureColor(name: string, type?: string): FeatureColor {
-  const key = `${type ?? ''} ${name}`.trim();
+  // Annotation sources supply nameless features — a GenBank record with no
+  // /label, or a database column that is NULL — so coerce rather than trust
+  // the declared type and throw on the hash below.
+  const label = typeof name === 'string' ? name : '';
+  const key = `${type ?? ''} ${label}`.trim();
 
   // Origins get a neutral grey — conventional on plasmid maps.
   if (/\bori\b|origin|rep_origin/i.test(key)) {
@@ -50,7 +54,8 @@ export function featureColor(name: string, type?: string): FeatureColor {
     }
   }
 
-  // Fall back to a stable hashed hue.
-  const hue = fnv1a(name.toLowerCase()) % 360;
+  // Fall back to a stable hashed hue. Hashes the label alone, so the same
+  // label keeps its colour across plasmids regardless of how it is typed.
+  const hue = fnv1a(label.toLowerCase()) % 360;
   return { fill: hsl(hue, 55, 72), border: hsl(hue, 48, 45) };
 }

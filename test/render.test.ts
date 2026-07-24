@@ -6,6 +6,7 @@ import {
   findSites,
   reverseComplement,
   detectCommonFeatures,
+  featureColor,
   COMMON_FEATURES,
 } from '../src/index';
 import { arcsOverlap, spanToArc } from '../src/render/geometry';
@@ -201,6 +202,39 @@ describe('SVG rendering', () => {
     const paths = svg.match(/<path /g) ?? [];
     expect(paths.length).toBeGreaterThanOrEqual(3);
     expect(svg).toContain('AmpR');
+  });
+
+  it('renders features whose name is missing instead of throwing', () => {
+    // Annotation sources really do hand over nameless features: GenBank
+    // records with no /label, and database columns that are NULL. The declared
+    // type says string, so reproduce what live data actually delivers.
+    const nameless = {
+      ...record,
+      features: [
+        { name: null as unknown as string, type: 'CDS', start: 100, end: 900, strand: 1 as const },
+        { name: '   ', type: 'promoter', start: 1000, end: 1100, strand: 1 as const },
+        { name: undefined as unknown as string, start: 1200, end: 1500, strand: -1 as const },
+      ],
+    };
+
+    const svg = renderPlasmidSVG(nameless);
+    // Every band is still drawn...
+    expect((svg.match(/<path class="feature"/g) ?? []).length).toBe(3);
+    // ...and no placeholder leaks into the output as visible text.
+    expect(svg).not.toContain('>null<');
+    expect(svg).not.toContain('>undefined<');
+    expect(svg).not.toContain('data-name="null"');
+    // The feature type stands in as the label when there is a usable one.
+    expect(svg).toContain('CDS');
+    expect(svg).toContain('promoter');
+  });
+
+  it('exposes featureColor safely for a nameless feature', () => {
+    // Public export, so callers can reach it with the same bad data directly.
+    expect(() => featureColor(null as unknown as string)).not.toThrow();
+    expect(() => featureColor(undefined as unknown as string, 'CDS')).not.toThrow();
+    // A named feature keeps the colour it had before the guard was added.
+    expect(featureColor('AmpR', 'CDS')).toEqual(featureColor('AmpR', 'CDS'));
   });
 
   it('escapes XML-unsafe names', () => {

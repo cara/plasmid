@@ -63,6 +63,17 @@ function wrapTitle(text: string, maxWidth: number, fontSize: number): string[] {
   return lines;
 }
 
+/**
+ * The label to draw for a feature: its name, falling back to its type when the
+ * name is missing, empty or not a string at all. Returns `''` when there is
+ * nothing to show, which callers treat as "draw the band, skip the label".
+ */
+function featureLabel(ft: Feature): string {
+  const name = typeof ft.name === 'string' ? ft.name.trim() : '';
+  if (name) return name;
+  return typeof ft.type === 'string' ? ft.type.trim() : '';
+}
+
 interface Laid {
   feature: Feature;
   /** Index of the feature in the input record.features array. */
@@ -145,6 +156,12 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
   if (features.length === 0 && (opts.detectFeatures ?? true) && length > 0) {
     features = detectCommonFeatures(seq, circular);
   }
+  // Real annotation sources hand us features with no usable name — GenBank
+  // records without a /label, and database rows where the column is NULL.
+  // `Feature.name` is typed as a string, but a renderer fed live data should
+  // draw the feature rather than throw, so normalise once here and let every
+  // consumer below assume a plain string.
+  features = features.map((ft) => ({ ...ft, name: featureLabel(ft) }));
 
   const externalLabels: Array<{ angle: number; anchorR: number; text: string; color: string }> = [];
 
@@ -185,6 +202,13 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
 
       const midAngle = normAngle(it.startAngle + it.arcLen / 2);
       const midR = (innerR + outerR) / 2;
+
+      // An unnamed feature still gets its band drawn, but there is nothing to
+      // label it with — emitting an empty <text> would leave a leader line
+      // pointing at blank space.
+      if (!it.feature.name) {
+        continue;
+      }
 
       if (it.arcLen >= 26) {
         // On-arc curved label for wide features.
