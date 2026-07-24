@@ -292,9 +292,22 @@ function tickStep(length: number): number {
   return 10 * pow;
 }
 
+/** Horizontal breathing room kept between a label and the canvas edge. */
+const LABEL_PAD = 4;
+/** Preferred gap between the ring and the label column. */
+const LABEL_LEAD = 46;
+/** Shortest leader we will draw before wrapping the text instead. */
+const MIN_LABEL_LEAD = 10;
+
 /**
  * Place external labels outside the map with leader lines, stacking them
  * vertically within each hemisphere so they don't overlap.
+ *
+ * The label column is pulled inwards until the *text* fits the canvas, not
+ * just its anchor point — a long name like "chicken β-actin promoter" used to
+ * start at the preferred offset and run straight off the viewBox. When even
+ * the shortest leader leaves too little room, the label wraps onto extra lines
+ * and the vertical packing accounts for the taller block.
  */
 function layoutExternalLabels(
   labels: Array<{ angle: number; anchorR: number; text: string; color: string }>,
@@ -308,7 +321,10 @@ function layoutExternalLabels(
   const out: string[] = [];
   const rowH = compact ? 13 : 15;
   const fontSize = compact ? 10 : 11;
-  const labelX = { right: Math.min(size - 4, cx + radius + 46), left: Math.max(4, cx - radius - 46) };
+  const lineH = fontSize + 2;
+  // Average sans-serif glyph width; the renderer has no DOM to measure with.
+  const charW = fontSize * 0.55;
+  const textWidth = (s: string) => s.length * charW;
 
   for (const side of ['right', 'left'] as const) {
     const group = labels
@@ -318,24 +334,48 @@ function layoutExternalLabels(
         return { ...l, anchor, y: anchor[1] };
       })
       .sort((a, b) => a.y - b.y);
+    if (group.length === 0) continue;
 
-    // Push apart so consecutive rows keep at least rowH gap.
-    for (let i = 1; i < group.length; i++) {
-      if (group[i].y - group[i - 1].y < rowH) group[i].y = group[i - 1].y + rowH;
+    // Slide the column towards the ring until the widest label fits, but never
+    // closer than MIN_LABEL_LEAD so the leader line stays visible.
+    const widest = Math.max(...group.map((g) => textWidth(g.text)));
+    const x =
+      side === 'right'
+        ? Math.max(cx + radius + MIN_LABEL_LEAD, Math.min(cx + radius + LABEL_LEAD, size - LABEL_PAD - widest))
+        : Math.min(cx - radius - MIN_LABEL_LEAD, Math.max(cx - radius - LABEL_LEAD, LABEL_PAD + widest));
+
+    // Whatever room is left at that column is the hard budget for the text.
+    const avail = side === 'right' ? size - LABEL_PAD - x : x - LABEL_PAD;
+    const rows = group.map((g) => {
+      const lines = textWidth(g.text) <= avail ? [g.text] : wrapTitle(g.text, avail, fontSize);
+      return { ...g, lines, h: Math.max(rowH, lines.length * lineH) };
+    });
+
+    // Push apart so neighbouring blocks never touch, then keep the whole
+    // column inside the canvas: shift up if it overruns the bottom, and clamp
+    // at the top so a tall stack cannot be pushed off the other edge.
+    for (let i = 1; i < rows.length; i++) {
+      const minGap = (rows[i - 1].h + rows[i].h) / 2;
+      if (rows[i].y - rows[i - 1].y < minGap) rows[i].y = rows[i - 1].y + minGap;
     }
-    // Keep within canvas; if overflow, compress from the bottom.
-    const overflow = group.length ? group[group.length - 1].y - (size - 6) : 0;
-    if (overflow > 0) for (const g of group) g.y -= overflow;
+    const last = rows[rows.length - 1];
+    const overflow = last.y + last.h / 2 - (size - LABEL_PAD);
+    if (overflow > 0) for (const r of rows) r.y -= overflow;
+    const underflow = LABEL_PAD - (rows[0].y - rows[0].h / 2);
+    if (underflow > 0) for (const r of rows) r.y += underflow;
 
-    const x = side === 'right' ? labelX.right : labelX.left;
-    for (const g of group) {
-      const elbowX = side === 'right' ? x - 6 : x + 6;
+    const elbowX = side === 'right' ? x - 6 : x + 6;
+    for (const r of rows) {
       out.push(
-        `<polyline points="${g.anchor[0].toFixed(2)},${g.anchor[1].toFixed(2)} ${elbowX.toFixed(2)},${g.y.toFixed(2)} ${x.toFixed(2)},${g.y.toFixed(2)}" fill="none" stroke="#c0c4c9" stroke-width="0.8"/>`
+        `<polyline points="${r.anchor[0].toFixed(2)},${r.anchor[1].toFixed(2)} ${elbowX.toFixed(2)},${r.y.toFixed(2)} ${x.toFixed(2)},${r.y.toFixed(2)}" fill="none" stroke="#c0c4c9" stroke-width="0.8"/>`
       );
-      out.push(
-        `<text x="${x.toFixed(2)}" y="${(g.y + 3).toFixed(2)}" font-size="${fontSize}" fill="${g.color}" text-anchor="${side === 'right' ? 'start' : 'end'}" font-family="sans-serif">${esc(g.text)}</text>`
-      );
+      // Centre a wrapped block on the leader so the line meets its middle.
+      const top = r.y - ((r.lines.length - 1) * lineH) / 2;
+      r.lines.forEach((lineText, i) => {
+        out.push(
+          `<text x="${x.toFixed(2)}" y="${(top + i * lineH + 3).toFixed(2)}" font-size="${fontSize}" fill="${r.color}" text-anchor="${side === 'right' ? 'start' : 'end'}" font-family="sans-serif">${esc(lineText)}</text>`
+        );
+      });
     }
   }
   return out;

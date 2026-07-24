@@ -141,6 +141,61 @@ describe('SVG rendering', () => {
     }
   });
 
+  /**
+   * Estimated horizontal extent of every external (leader-line) label. These
+   * are the only texts anchored 'start'/'end'; ruler and title texts are
+   * centred and stay well inside the map.
+   */
+  const externalLabelExtents = (svg: string) =>
+    [
+      ...svg.matchAll(
+        /<text x="([-\d.]+)" y="[-\d.]+" font-size="([\d.]+)"[^>]*text-anchor="(start|end)"[^>]*>([^<]*)<\/text>/g
+      ),
+    ].map(([, xs, fs, anchor, text]) => {
+      const x = Number(xs);
+      const w = text.length * Number(fs) * 0.55;
+      return anchor === 'start' ? { text, left: x, right: x + w } : { text, left: x - w, right: x };
+    });
+
+  it('keeps long external labels inside the canvas', () => {
+    // Names long enough that the label column has to give ground, on both
+    // hemispheres so the left and right branches are both exercised.
+    const longNames = {
+      ...record,
+      features: [
+        { name: 'chicken β-actin promoter', type: 'promoter', start: 60, end: 90, strand: 1 as const },
+        { name: 'woodchuck hepatitis post-transcriptional regulatory element', start: 500, end: 530, strand: 1 as const },
+        { name: 'bovine growth hormone polyadenylation signal', start: 1100, end: 1130, strand: -1 as const },
+        { name: 'internal ribosome entry site from EMCV', start: 1600, end: 1630, strand: -1 as const },
+      ],
+    };
+
+    for (const size of [500, 640, 800, 1000]) {
+      const labels = externalLabelExtents(renderPlasmidSVG(longNames, { size }));
+      expect(labels.length).toBeGreaterThan(0);
+      for (const l of labels) {
+        expect(l.left, `"${l.text}" overflows left at size ${size}`).toBeGreaterThanOrEqual(-0.5);
+        expect(l.right, `"${l.text}" overflows right at size ${size}`).toBeLessThanOrEqual(size + 0.5);
+      }
+    }
+  });
+
+  it('wraps an external label rather than truncating it', () => {
+    const name = 'woodchuck hepatitis post-transcriptional regulatory element';
+    // A small canvas leaves too little room even at the shortest leader, so
+    // the label has to wrap; no part of the name may be dropped.
+    const svg = renderPlasmidSVG(
+      { ...record, features: [{ name, start: 500, end: 530, strand: 1 as const }] },
+      { size: 500 }
+    );
+    const parts = externalLabelExtents(svg).map((l) => l.text);
+    expect(parts.length).toBeGreaterThan(1);
+    // A break may land on a space or, for a word wider than the whole column,
+    // mid-token — so compare ignoring whitespace. The point is that every
+    // character survives rather than being cut off at the canvas edge.
+    expect(parts.join('').replace(/\s+/g, '')).toBe(name.replace(/\s+/g, ''));
+  });
+
   it('renders each feature as a colored path', () => {
     const svg = renderPlasmidSVG(record);
     const paths = svg.match(/<path /g) ?? [];
