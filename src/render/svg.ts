@@ -240,7 +240,9 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
 
   // ---- centre title (wrapped + recentred to fit the clear inner zone) ----
   const rawTitle = opts.title ?? record.name ?? 'plasmid';
-  const subtitle = `${length.toLocaleString()} bp${circular ? '' : ' · linear'}`;
+  // Pin the locale so the rendered SVG is identical on every host (a German
+  // default locale would otherwise emit "2.000 bp" instead of "2,000 bp").
+  const subtitle = `${length.toLocaleString('en-US')} bp${circular ? '' : ' · linear'}`;
   // Constrain the title to the clear inner circle so it never overlaps the
   // feature bands; keep a small readable floor for pathological many-lane maps.
   const maxTitleW = Math.max(96, innerClearR * 2 * 0.85);
