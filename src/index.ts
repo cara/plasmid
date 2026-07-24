@@ -1,5 +1,5 @@
 /**
- * @cara/plasmid — a small, dependency-free plasmid map renderer.
+ * @carabennemsi/plasmid — a small, dependency-free plasmid map renderer.
  *
  * Turns a nucleotide sequence (or a FASTA / GenBank file) into a standalone
  * circular plasmid-map SVG. Pure functions, no DOM and no runtime
@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import { renderPlasmidSVG, parsePlasmid } from '@cara/plasmid';
+ * import { renderPlasmidSVG, parsePlasmid } from '@carabennemsi/plasmid';
  * const record = parsePlasmid(fastaText);   // or GenBank, or raw sequence
  * const svg = renderPlasmidSVG(record);
  * ```

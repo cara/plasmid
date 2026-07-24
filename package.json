@@ -1,5 +1,5 @@
 {
-  "name": "@cara/plasmid",
+  "name": "@carabennemsi/plasmid",
   "version": "0.1.2",
   "description": "Dependency-free plasmid map renderer — turn a DNA sequence or FASTA/GenBank file into a standalone circular-map SVG. Runs in Node and the browser.",
   "keywords": [
@@ -38,7 +38,9 @@
     "build": "node build.mjs",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "vitest run",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "docs:build": "node docs/build.mjs",
+    "docs:typecheck": "tsc -p docs/tsconfig.json"
   },
   "devDependencies": {
     "esbuild": "^0.21.5",
@@ -50,5 +52,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://cara.github.io/plasmid/",
+  "bugs": {
+    "url": "https://github.com/cara/plasmid/issues"
   }
 }

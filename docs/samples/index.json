@@ -1,0 +1,67 @@
+{
+  "source": {
+    "title": "Sleeping Beauty transposon vector set",
+    "thesis": "Dissertation, Julius-Maximilians-Universität Würzburg",
+    "doi": "10.25972/OPUS-24979",
+    "doiUrl": "https://doi.org/10.25972/OPUS-24979",
+    "note": "Vector maps reproduced from the thesis. The pT2/pT2B transposon backbones and the SB100X transposase derive from the published Sleeping Beauty system; the derived constructs are the cloning work described in the thesis."
+  },
+  "vectors": [
+    {
+      "file": "pCMV-CAT-T7-SB100X.gb",
+      "name": "pCMV(CAT)T7-SB100X",
+      "family": "Transposase",
+      "bp": 4752,
+      "description": "Helper plasmid supplying the hyperactive SB100X transposase in trans. CMV enhancer/promoter drives SB100x, with an SV40 intron and poly(A) signal; CmR backbone."
+    },
+    {
+      "file": "pT2.gb",
+      "name": "pT2",
+      "family": "Backbone",
+      "bp": 3718,
+      "description": "Minimal T2 transposon: IR/DR left and right flanking an empty pBluescript-style polylinker. AmpR, pUC ori and f1 ori sit outside the transposon and are not mobilised."
+    },
+    {
+      "file": "pT2-BN.gb",
+      "name": "pT2 BN",
+      "family": "Backbone",
+      "bp": 3730,
+      "description": "pT2 with the modified BN cloning site between the IR/DRs — the acceptor backbone for the expression cassettes below."
+    },
+    {
+      "file": "pT2-BN-SVPuro-CAG-EGFP.gb",
+      "name": "pT2 BN SVPuro CAG EGFP",
+      "family": "Reporter",
+      "bp": 8150,
+      "description": "Transposon carrying two cassettes: SV40 promoter → PuroR for selection, and the CAG promoter (CMV enhancer + chicken β-actin promoter) → EGFP with a β-globin poly(A) signal."
+    },
+    {
+      "file": "pT2-BN-SVPuro-CAG-KRAB.gb",
+      "name": "pT2 BN SVPuro CAG KRAB",
+      "family": "Repressor",
+      "bp": 8431,
+      "description": "CAG-driven tTR-KRAB repressor — annotated as TetR with an SV40 NLS and an IRES — alongside the SV40 → PuroR selection cassette."
+    },
+    {
+      "file": "pT2-SVPuro-CMV-tTR.gb",
+      "name": "pT2 SVPuro CMV tTR",
+      "family": "Repressor",
+      "bp": 6441,
+      "description": "SV40 → PuroR selection plus a CMV enhancer/promoter driving the tet repressor (TetR), for tetracycline-controlled silencing."
+    },
+    {
+      "file": "pT2-SVNeo.gb",
+      "name": "pT2 SVNeo",
+      "family": "Backbone",
+      "bp": 5153,
+      "description": "Transposon with an SV40 → NeoR/KanR cassette, the G418-selectable counterpart to the SVPuro series."
+    },
+    {
+      "file": "pT2B-Puro-CMV.gb",
+      "name": "pT2B Puro CMV",
+      "family": "Backbone",
+      "bp": 5499,
+      "description": "pT2B backbone with SV40 → PuroR selection and an empty CMV expression cassette ready to receive a coding sequence."
+    }
+  ]
+}

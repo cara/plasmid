@@ -1,4 +1,4 @@
-# Build, type-check and test @cara/plasmid, and publish to npm on a version tag.
+# Build, type-check and test @carabennemsi/plasmid, and publish to npm on a version tag.
 name: ci
 on:
   push:
@@ -20,6 +20,10 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
+      # The Pages demo imports the renderer from src/, so a breaking change to
+      # the public API should fail here rather than at deploy time.
+      - run: npm run docs:typecheck
+      - run: npm run docs:build
 
   publish:
     # Publish to npm when a v* tag is pushed. Requires the NPM_TOKEN secret.

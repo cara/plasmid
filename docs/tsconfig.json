@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    // The demo iterates NodeLists directly; the library itself has no DOM
+    // dependency at all, so this stays scoped to docs/.
+    "lib": ["ES2020", "DOM", "DOM.Iterable"]
+  },
+  "include": ["app.ts", "../src"]
+}

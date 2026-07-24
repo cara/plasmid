@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@carabennemsi/plasmid — circular plasmid maps in the browser</title>
+    <meta
+      name="description"
+      content="Live demo of @carabennemsi/plasmid: render Sleeping Beauty transposon vectors, or paste your own FASTA / GenBank / raw sequence and get a standalone SVG plasmid map."
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./assets/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">🧬</span>
+        <div>
+          <h1>@carabennemsi/plasmid</h1>
+          <p class="tagline">
+            Dependency-free circular plasmid maps — sequence in, standalone SVG out
+          </p>
+        </div>
+      </div>
+      <nav class="toplinks">
+        <a href="https://www.npmjs.com/package/@carabennemsi/plasmid">npm</a>
+        <a href="https://github.com/cara/plasmid">GitHub</a>
+        <a href="https://plasmid.cloudlab.bio">plasmid.cloudlab.bio</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p>
+          Everything on this page runs in your browser. No sequence is uploaded
+          anywhere — the renderer is a pure function that takes a nucleotide
+          sequence and returns an <code>&lt;svg&gt;</code> string.
+        </p>
+        <pre class="install"><code>npm i @carabennemsi/plasmid</code></pre>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Sample vectors</h2>
+          <p class="hint">
+            A Sleeping Beauty transposon set from the thesis
+            <a href="https://doi.org/10.25972/OPUS-24979">DOI:10.25972/OPUS-24979</a>.
+            Pick one to render its map.
+          </p>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+
+      <section class="panel stage-panel">
+        <div class="panel-head">
+          <h2 id="stage-title">Map</h2>
+          <div class="downloadbar" id="downloads"></div>
+        </div>
+        <div class="stage">
+          <div class="map" id="map">
+            <div class="placeholder">Pick a sample vector, or render your own below.</div>
+          </div>
+          <div class="meta" id="meta"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Render your own</h2>
+          <p class="hint">
+            Paste a sequence or drop a file — FASTA (<code>.fa</code>,
+            <code>.fasta</code>), GenBank (<code>.gb</code>, <code>.gbk</code>) or
+            a raw sequence. Format is auto-detected.
+          </p>
+        </div>
+        <div class="render-input" id="dropzone">
+          <div class="controls">
+            <label>
+              Format
+              <select id="format">
+                <option value="auto">Auto-detect</option>
+                <option value="fasta">FASTA</option>
+                <option value="genbank">GenBank</option>
+                <option value="raw">Raw sequence</option>
+              </select>
+            </label>
+            <label>
+              Topology
+              <select id="topology">
+                <option value="circular">Circular</option>
+                <option value="linear">Linear</option>
+              </select>
+            </label>
+            <label class="file-label">
+              <input
+                id="file"
+                type="file"
+                accept=".fa,.fasta,.fna,.gb,.gbk,.genbank,.txt,.seq"
+              />
+              <span>Choose file…</span>
+            </label>
+          </div>
+          <textarea
+            id="dna-input"
+            spellcheck="false"
+            placeholder=">my_plasmid&#10;ATGCATGC..."
+          ></textarea>
+          <div class="render-actions">
+            <button id="render-btn" class="primary">Render map</button>
+            <button id="sample-btn" class="ghost">Load example</button>
+            <span id="render-error" class="error"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="sitefoot">
+      <p>
+        Sample vector sequences © Severin Fink, from the dissertation
+        <a href="https://doi.org/10.25972/OPUS-24979">DOI:10.25972/OPUS-24979</a>
+        (Julius-Maximilians-Universität Würzburg). Reproduced with permission of
+        the author. The pT2/pT2B transposon backbones and the SB100X transposase
+        derive from the published Sleeping Beauty system and remain the work of
+        their original authors.
+      </p>
+      <p>
+        Renderer released under the MIT licence ·
+        <a href="https://github.com/cara/plasmid">source</a> ·
+        <a href="https://plasmid.cloudlab.bio">browse the full vector database</a>
+      </p>
+    </footer>
+  </body>
+</html>

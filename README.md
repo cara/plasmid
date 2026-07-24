@@ -1,8 +1,12 @@
-# @cara/plasmid
+# @carabennemsi/plasmid
 
 > Dependency-free plasmid map renderer — turn a DNA sequence or FASTA/GenBank file into a standalone circular-map SVG. Runs in Node and the browser.
 
-`@cara/plasmid` takes a nucleotide sequence (or a parsed FASTA / GenBank record) and returns a complete, self-contained `<svg>…</svg>` string: a circular plasmid map with feature arrows, restriction cut sites, a base-pair ruler, and a centered name/length label. Everything is a pure function — no DOM, no canvas, no runtime dependencies — so the same code path works on a server (static pre-render) and in the browser.
+`@carabennemsi/plasmid` takes a nucleotide sequence (or a parsed FASTA / GenBank record) and returns a complete, self-contained `<svg>…</svg>` string: a circular plasmid map with feature arrows, restriction cut sites, a base-pair ruler, and a centered name/length label. Everything is a pure function — no DOM, no canvas, no runtime dependencies — so the same code path works on a server (static pre-render) and in the browser.
+
+**[▶ Live demo](https://cara.github.io/plasmid/)** — render the sample vectors below, or paste your own sequence. Everything runs client-side.
+
+For a searchable database of 200 k+ published vectors built on this renderer, see **[plasmid.cloudlab.bio](https://plasmid.cloudlab.bio)**.
 
 ## Features
 
@@ -17,7 +21,7 @@
 ## Install
 
 ```sh
-npm i @cara/plasmid
+npm i @carabennemsi/plasmid
 ```
 
 Requires Node ≥ 18 (or any modern browser). The package is ESM-only.
@@ -28,7 +32,7 @@ Parse a FASTA or GenBank string, render it, and write the SVG to disk:
 
 ```ts
 import { readFileSync, writeFileSync } from 'node:fs';
-import { parsePlasmid, renderPlasmidSVG } from '@cara/plasmid';
+import { parsePlasmid, renderPlasmidSVG } from '@carabennemsi/plasmid';
 
 const text = readFileSync('pUC19.gb', 'utf8');
 const record = parsePlasmid(text); // format auto-detected (GenBank / FASTA / raw)
@@ -41,7 +45,7 @@ Or build a `PlasmidRecord` by hand:
 
 ```ts
 import { writeFileSync } from 'node:fs';
-import { renderPlasmidSVG, type PlasmidRecord } from '@cara/plasmid';
+import { renderPlasmidSVG, type PlasmidRecord } from '@carabennemsi/plasmid';
 
 const record: PlasmidRecord = {
   name: 'my-plasmid',
@@ -66,12 +70,12 @@ const svg = renderPlasmidSVG({ name: 'unknown', sequence });
 
 ## Rasterize to PNG
 
-`@cara/plasmid` only produces SVG strings — it has no rendering dependency. To get a PNG, pipe the SVG through any SVG rasterizer of your choice. [`@resvg/resvg-js`](https://github.com/thx/resvg-js) is a good pure-Rust option (install it yourself; it is **not** a dependency of this package):
+`@carabennemsi/plasmid` only produces SVG strings — it has no rendering dependency. To get a PNG, pipe the SVG through any SVG rasterizer of your choice. [`@resvg/resvg-js`](https://github.com/thx/resvg-js) is a good pure-Rust option (install it yourself; it is **not** a dependency of this package):
 
 ```ts
 import { writeFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
-import { parsePlasmid, renderPlasmidSVG } from '@cara/plasmid';
+import { parsePlasmid, renderPlasmidSVG } from '@carabennemsi/plasmid';
 
 const svg = renderPlasmidSVG(parsePlasmid(fastaText));
 const png = new Resvg(svg).render().asPng();
@@ -83,7 +87,7 @@ writeFileSync('plasmid.png', png);
 `renderPlasmidSVG` returns a plain string, so inlining it is just an `innerHTML` assignment — no DOM APIs are touched inside the library:
 
 ```js
-import { renderPlasmidSVG } from '@cara/plasmid';
+import { renderPlasmidSVG } from '@carabennemsi/plasmid';
 
 const record = { name: 'my-plasmid', sequence };
 document.querySelector('#map').innerHTML = renderPlasmidSVG(record);
@@ -98,6 +102,32 @@ The default output is an 800×800 SVG (`viewBox="0 0 800 800"`) containing:
 - on-arc curved labels for wide features and external leader-line labels for narrow ones,
 - unique restriction cut sites (from the enzyme panel) marked around the circle,
 - the plasmid name and length (in bp) centered in the middle.
+
+## Example: a Sleeping Beauty transposon vector
+
+`pT2 BN SVPuro CAG EGFP` — 8,150 bp, 27 annotated features — rendered straight from its GenBank record with no manual layout:
+
+<p align="center">
+  <img
+    src="https://raw.githubusercontent.com/cara/plasmid/main/docs/media/pT2-BN-SVPuro-CAG-EGFP.png"
+    alt="Circular map of pT2 BN SVPuro CAG EGFP: 8,150 bp with IR/DR left and right flanking a CAG-driven EGFP cassette and an SV40-driven PuroR cassette, plus AmpR, ori and f1 ori on the backbone."
+    width="720"
+  />
+</p>
+
+```ts
+import { readFileSync, writeFileSync } from 'node:fs';
+import { parsePlasmid, renderPlasmidSVG } from '@carabennemsi/plasmid';
+
+const record = parsePlasmid(readFileSync('pT2-BN-SVPuro-CAG-EGFP.gb', 'utf8'));
+writeFileSync('map.svg', renderPlasmidSVG(record, { size: 900 }));
+```
+
+The IR/DR left and right repeats delimit the mobile transposon; everything the SB100X transposase excises sits between them, while `AmpR`, `ori` and `f1 ori` stay behind on the donor backbone.
+
+Seven more vectors from the same set — the SB100X transposase helper, the empty pT2/pT2B backbones, and the tTR/KRAB repressor constructs — are on the **[live demo](https://cara.github.io/plasmid/)**, with their GenBank files in [`docs/samples/`](https://github.com/cara/plasmid/tree/main/docs/samples).
+
+> **Sample vector sequences** © Severin Fink, from the dissertation **[DOI:10.25972/OPUS-24979](https://doi.org/10.25972/OPUS-24979)** (Julius-Maximilians-Universität Würzburg), reproduced with permission of the author. They are included as demonstration data and are **not** covered by this package's MIT licence. The pT2/pT2B transposon backbones and the SB100X transposase derive from the published Sleeping Beauty system and remain the work of their original authors.
 
 ## API reference
 
@@ -268,4 +298,6 @@ Because everything is exact-match, detection is deterministic and reproducible: 
 
 ## License
 
-MIT © cara
+MIT © cara — the renderer, its parsers and the demo site.
+
+The Sleeping Beauty vector sequences under [`docs/samples/`](https://github.com/cara/plasmid/tree/main/docs/samples) are **not** MIT-licensed: they are © Severin Fink, from the dissertation [DOI:10.25972/OPUS-24979](https://doi.org/10.25972/OPUS-24979), included as demonstration data with the author's permission.

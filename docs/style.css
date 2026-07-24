@@ -1,0 +1,170 @@
+/*
+ * Demo page styling. Deliberately mirrors the design tokens used by
+ * plasmid.cloudlab.bio so the two sites read as one project. Light-only: the
+ * rendered SVG bakes in a white background, so a dark surface behind it would
+ * leave a bright square floating on the page.
+ */
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --ink: #202124;
+  --muted: #5f6368;
+  --line: #e2e5ea;
+  --accent: #2b6cb0;
+  --accent-soft: #e8f0fb;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  display: flex; flex-direction: column; min-height: 100vh;
+}
+a { color: var(--accent); }
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px; background: var(--panel); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { font-size: 28px; }
+.topbar h1 { font-size: 18px; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tagline { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.toplinks { display: flex; gap: 4px; flex-wrap: wrap; }
+.toplinks a {
+  padding: 8px 14px; border-radius: 8px; font-size: 14px;
+  color: var(--muted); text-decoration: none;
+}
+.toplinks a:hover { background: var(--bg); color: var(--accent); }
+
+/* ---- layout ---- */
+main {
+  flex: 1; width: 100%; max-width: 1100px; margin: 0 auto;
+  padding: 24px; display: flex; flex-direction: column; gap: 20px;
+}
+.intro p { margin: 0 0 12px; max-width: 68ch; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.install {
+  margin: 0; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: var(--shadow); overflow-x: auto;
+}
+.install code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 18px 20px;
+}
+.panel-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.panel-head h2 { margin: 0; font-size: 16px; }
+.hint { margin: 0; font-size: 13px; color: var(--muted); max-width: 62ch; line-height: 1.55; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+
+/* ---- sample gallery ---- */
+.gallery {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.card {
+  text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.card:hover { border-color: var(--accent); background: var(--bg); }
+.card.is-active { border-color: var(--accent); background: var(--accent-soft); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.c-name { font-weight: 600; font-size: 14px; }
+.c-meta { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; }
+.c-tag {
+  background: var(--accent-soft); color: var(--accent); border-radius: 999px;
+  padding: 1px 8px; font-weight: 600;
+}
+.c-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ---- stage (map + meta) ---- */
+.stage { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.map {
+  flex: 1 1 340px; min-width: 0;
+  border: 1px solid var(--line); border-radius: 12px; padding: 8px;
+  display: flex; align-items: center; justify-content: center;
+  /* keep the plasmid image un-selectable so dragging on the ring doesn't highlight its text */
+  user-select: none; -webkit-user-select: none;
+}
+.map svg { max-width: 100%; height: auto; display: block; }
+.placeholder { color: var(--muted); font-size: 13px; padding: 60px 20px; text-align: center; }
+.meta { flex: 0 1 300px; min-width: 0; font-size: 13px; }
+.meta h3 { margin: 0 0 8px; font-size: 14px; }
+.meta dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 14px; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; }
+.meta .attribution {
+  font-size: 11.5px; color: var(--muted); line-height: 1.55;
+  border-top: 1px solid var(--line); padding-top: 10px;
+}
+.featurelist { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+.featurelist li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+}
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.f-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-pos { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+/* ---- download toolbar ---- */
+.downloadbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.downloadbar button, .downloadbar a {
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; text-decoration: none;
+}
+.downloadbar button:hover, .downloadbar a:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+/* ---- render-your-own ---- */
+.render-input { display: flex; flex-direction: column; gap: 12px; }
+.render-input.is-dragover { outline: 2px dashed var(--accent); outline-offset: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 13px; }
+.controls label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.controls select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+.file-label input { display: none; }
+.file-label span {
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; color: var(--ink);
+}
+.file-label span:hover { background: var(--bg); }
+#dna-input {
+  width: 100%; min-height: 180px; resize: vertical;
+  border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5;
+}
+#dna-input:focus { outline: none; border-color: var(--accent); }
+.render-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+button.primary {
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  border-radius: 8px; padding: 9px 18px; font-size: 14px; cursor: pointer;
+}
+button.primary:hover { filter: brightness(1.08); }
+button.ghost {
+  background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer;
+}
+button.ghost:hover { background: var(--bg); }
+.error { color: #c5221f; font-size: 13px; }
+
+/* ---- footer ---- */
+.sitefoot {
+  border-top: 1px solid var(--line); background: var(--panel);
+  padding: 20px 24px; margin-top: 8px;
+}
+.sitefoot p {
+  max-width: 1100px; margin: 0 auto 8px; font-size: 12px; color: var(--muted); line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  main { padding: 16px; }
+  .topbar { padding: 12px 16px; }
+  .meta { flex-basis: 100%; }
+}

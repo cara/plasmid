@@ -1,4 +1,4 @@
-// Build @cara/plasmid: bundle the ESM entry with esbuild, emit types with tsc.
+// Build @carabennemsi/plasmid: bundle the ESM entry with esbuild, emit types with tsc.
 // The package has zero runtime dependencies, so a single bundled file is the
 // simplest thing that resolves cleanly under Node ESM and any bundler.
 import { build } from 'esbuild';
@@ -24,4 +24,4 @@ execSync('npx tsc -p tsconfig.build.json --emitDeclarationOnly --declaration --o
   stdio: 'inherit',
 });
 
-console.log('built @cara/plasmid -> dist/');
+console.log('built @carabennemsi/plasmid -> dist/');
