@@ -139,7 +139,7 @@ All exports are pure functions and data — importing the package has no side ef
 function renderPlasmidSVG(record: PlasmidRecord, opts?: RenderOptions): string;
 ```
 
-Renders `record` to a complete, standalone `<svg>…</svg>` string. Non-ACGT characters in `record.sequence` are ignored when computing length and drawing. If `record.features` is empty and `opts.detectFeatures` is on (default), common features are auto-detected first. See [`RenderOptions`](#renderoptions) for all knobs.
+Renders `record` to a complete, standalone `<svg>…</svg>` string. Whitespace, digits and punctuation in `record.sequence` are stripped; ambiguity codes (`N`, `R`, `Y`, …) are **kept as placeholders** so they still occupy a base position and feature coordinates stay aligned with the molecule. If `record.features` is empty and `opts.detectFeatures` is on (default), common features are auto-detected first. See [`RenderOptions`](#renderoptions) for all knobs.
 
 ### `parsePlasmid(text, format?) => PlasmidRecord`
 
@@ -247,7 +247,7 @@ interface Feature {
 ```ts
 interface PlasmidRecord {
   name: string;        // display name, drawn in the center of the map
-  sequence: string;    // raw nucleotide sequence; non-ACGT chars are ignored for rendering
+  sequence: string;    // raw nucleotide sequence; non-letters stripped, ambiguity codes kept as placeholders
   circular?: boolean;  // circular (plasmid) vs linear — default true
   features?: Feature[]; // known annotations; auto-detected when empty and detectFeatures is on
   definition?: string; // free-text description (e.g. GenBank DEFINITION); carried through, not drawn
@@ -275,6 +275,7 @@ interface RenderOptions {
   showTicks?: boolean;
   detectFeatures?: boolean;
   title?: string;
+  idPrefix?: string;
 }
 ```
 
@@ -282,12 +283,13 @@ interface RenderOptions {
 | --- | --- | --- | --- |
 | `size` | `number` | `800` | SVG viewport size (square); sets `viewBox="0 0 size size"`. |
 | `showCutters` | `boolean` | `true` | Draw restriction cut sites. |
-| `maxCutFrequency` | `number` | `1` | Only draw enzymes that cut exactly this many times (`1` = unique cutters read best). `0` = no filter. |
+| `maxCutFrequency` | `number` | `1` | Only draw enzymes that cut **at most** this many times (`1` = unique cutters, which read best). `0` = no filter. |
 | `enzymes` | `EnzymeSpec[]` | `DEFAULT_ENZYMES` | Enzymes to scan for. |
 | `showFeatures` | `boolean` | `true` | Draw feature arrows/arcs. |
 | `showTicks` | `boolean` | `true` | Draw the base-pair tick ruler. |
 | `detectFeatures` | `boolean` | `true` | When the record has no features, auto-detect the bundled common-feature panel. |
 | `title` | `string` | `record.name` | Title override drawn in the center. |
+| `idPrefix` | `string` | derived from the record | Prefix for generated SVG element ids. Ids are document-global, so two maps inlined into one page must not share them; the default is a stable token derived from the record. |
 
 ## How detection works
 

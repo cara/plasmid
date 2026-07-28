@@ -15,11 +15,14 @@ export function parseFasta(text: string): PlasmidRecord {
     const l = raw.trim();
     if (l.startsWith('>')) {
       if (started) break; // only the first record
-      name = l.slice(1).split(/[\s|]/)[0] || 'sequence';
+      // Trim first: "> pUC19" is as common as ">pUC19", and splitting the
+      // untrimmed remainder yields an empty first field and loses the name.
+      name = l.slice(1).trim().split(/[\s|]/)[0] || 'sequence';
       started = true;
       continue;
     }
-    if (l) seq.push(l);
+    // Sequence lines before the first header aren't part of this record.
+    if (l && (started || !text.includes('>'))) seq.push(l);
   }
   return { name, sequence: seq.join('').replace(/[^A-Za-z]/g, ''), circular: true, features: [] };
 }

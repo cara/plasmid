@@ -11,15 +11,21 @@ import { reverseComplement } from './restriction';
  * verbatim, so a rendered map never invents annotations that aren't there.
  */
 export function detectCommonFeatures(sequence: string, circular = true): Feature[] {
-  const seq = sequence.toUpperCase().replace(/[^ACGT]/g, '');
+  // Fold ambiguity codes to N instead of deleting them: they occupy a base
+  // position that the returned 1-based coordinates have to line up with, and
+  // an N can never match a probe anyway.
+  const seq = sequence.replace(/[^A-Za-z]/g, '').toUpperCase().replace(/[^ACGT]/g, 'N');
   const L = seq.length;
   if (L === 0) return [];
-  const haystack = circular ? seq + seq : seq;
   const out: Feature[] = [];
 
   for (const cf of COMMON_FEATURES) {
     const fwd = cf.bp.toUpperCase();
     const rev = reverseComplement(fwd);
+    // Only the longest probe can straddle the origin, so a `needle.length - 1`
+    // tail is all the wrap-around a search needs — doubling a 200 kb sequence
+    // per probe is pure waste.
+    const haystack = circular ? seq + seq.slice(0, Math.max(0, fwd.length - 1)) : seq;
     for (const [needle, strand] of [
       [fwd, 1],
       [rev, -1],

@@ -65,10 +65,15 @@ export function arcBandPath(
   innerR: number,
   outerR: number,
   startAngle: number,
-  arcLen: number,
+  rawArcLen: number,
   headAt: 0 | 1 | -1,
   headDeg: number
 ): string {
+  // An arc of exactly 360° has identical endpoints, and SVG treats such an arc
+  // as "omit this segment entirely" — a feature covering the whole molecule
+  // would silently vanish. Anything beyond 360° would wrap over itself. Stop
+  // just short of a full turn so the band reads as a closed ring.
+  const arcLen = Math.min(rawArcLen, 359.9);
   const midR = (innerR + outerR) / 2;
   const large = arcLen > 180 ? 1 : 0;
   const a0 = startAngle;

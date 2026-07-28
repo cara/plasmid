@@ -47,7 +47,7 @@ export interface RenderOptions {
   size?: number;
   /** Draw restriction cut sites. Default true. */
   showCutters?: boolean;
-  /** Only draw enzymes that cut exactly this many times (unique cutters read best). 0 = no filter. Default 1. */
+  /** Only draw enzymes that cut at most this many times (1 = unique cutters, which read best). 0 = no filter. Default 1. */
   maxCutFrequency?: number;
   /** Enzymes to scan for. Defaults to a small common panel. */
   enzymes?: EnzymeSpec[];
@@ -59,4 +59,11 @@ export interface RenderOptions {
   detectFeatures?: boolean;
   /** Optional title override (defaults to record.name). */
   title?: string;
+  /**
+   * Prefix for generated SVG element ids. Ids are document-global, so two maps
+   * inlined into the same page must not share them. Defaults to a stable token
+   * derived from the record, which is enough to keep distinct maps apart; set
+   * it explicitly when you need to guarantee uniqueness yourself.
+   */
+  idPrefix?: string;
 }

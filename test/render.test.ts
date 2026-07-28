@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   renderPlasmidSVG,
   parsePlasmid,
+  parseGenBank,
   detectFormat,
   findSites,
   reverseComplement,
@@ -246,5 +247,146 @@ describe('SVG rendering', () => {
   it('handles an empty / tiny sequence without throwing', () => {
     expect(() => renderPlasmidSVG({ name: 'x', sequence: '' })).not.toThrow();
     expect(() => renderPlasmidSVG({ name: 'x', sequence: 'ACGT' })).not.toThrow();
+  });
+});
+
+describe('regressions', () => {
+  it('keeps feature coordinates aligned when the sequence contains ambiguity codes', () => {
+    // 100 N's up front used to be deleted, shortening the molecule to 900 bp
+    // and dropping every annotation that started beyond it.
+    const sequence = 'N'.repeat(100) + 'ATGC'.repeat(225); // 1000 bp
+    const svg = renderPlasmidSVG(
+      {
+        name: 'ambiguous',
+        sequence,
+        circular: true,
+        features: [{ name: 'tail', type: 'CDS', start: 901, end: 1000, strand: 1 }],
+      },
+      { showCutters: false, showTicks: false }
+    );
+    expect(svg).toContain('1,000 bp');
+    expect(svg).toContain('data-start="901"');
+  });
+
+  it('detects common features at their true coordinates past an ambiguity run', () => {
+    const sequence = 'N'.repeat(50) + AMPR + 'ATGC'.repeat(50);
+    const [hit] = detectCommonFeatures(sequence, true).filter((f) => f.name === 'AmpR');
+    expect(hit.start).toBe(51);
+    expect(hit.end).toBe(50 + AMPR.length);
+  });
+
+  it('draws a feature that spans the whole molecule', () => {
+    // An arc of exactly 360° has identical endpoints, which SVG renders as
+    // nothing at all — the band used to disappear.
+    const svg = renderPlasmidSVG(
+      {
+        name: 'full',
+        sequence: 'ATGC'.repeat(250),
+        circular: true,
+        features: [{ name: 'whole', type: 'misc_feature', start: 1, end: 1000, strand: 0 }],
+      },
+      { showCutters: false, showTicks: false }
+    );
+    const d = /<path class="feature"[^>]*d="([^"]+)"/.exec(svg)![1];
+    const [, sx, sy, ex, ey] = /^M([\d.]+) ([\d.]+) A[\d.]+ [\d.]+ 0 \d 1 ([\d.]+) ([\d.]+)/.exec(d)!;
+    expect(`${sx},${sy}`).not.toBe(`${ex},${ey}`);
+  });
+
+  it('clamps a feature whose end runs past the sequence', () => {
+    const svg = renderPlasmidSVG(
+      {
+        name: 'over',
+        sequence: 'ATGC'.repeat(250),
+        circular: true,
+        features: [{ name: 'over', type: 'CDS', start: 900, end: 5000, strand: 0 }],
+      },
+      { showCutters: false, showTicks: false }
+    );
+    // No arc radius may be repeated at a distance implying > 1 turn; the band
+    // must stay inside a single sweep.
+    const d = /<path class="feature"[^>]*d="([^"]+)"/.exec(svg)![1];
+    expect(d).not.toContain('NaN');
+    expect(svg).toContain('data-end="5000"'); // original coords still reported
+  });
+
+  it('namespaces element ids so two maps can share a document', () => {
+    const base = {
+      sequence: 'ATGC'.repeat(500),
+      circular: true,
+      features: [{ name: 'wide', type: 'CDS', start: 1, end: 600, strand: 1 as const }],
+    };
+    const a = renderPlasmidSVG({ ...base, name: 'first' }, { showCutters: false, showTicks: false });
+    const b = renderPlasmidSVG({ ...base, name: 'second' }, { showCutters: false, showTicks: false });
+    const ids = (s: string) => [...s.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids(a).length).toBeGreaterThan(0);
+    expect(ids(a).some((id) => ids(b).includes(id))).toBe(false);
+    // Same input still renders byte-identically.
+    expect(renderPlasmidSVG({ ...base, name: 'first' }, { showCutters: false, showTicks: false })).toBe(a);
+  });
+
+  it('honours an explicit idPrefix', () => {
+    const svg = renderPlasmidSVG(
+      {
+        name: 'pre',
+        sequence: 'ATGC'.repeat(500),
+        circular: true,
+        features: [{ name: 'wide', type: 'CDS', start: 1, end: 600, strand: 1 }],
+      },
+      { showCutters: false, showTicks: false, idPrefix: 'mine-' }
+    );
+    expect(svg).toContain('id="mine-arc0"');
+    expect(svg).toContain('href="#mine-arc0"');
+  });
+
+  it('rules short sequences with whole-bp ticks', () => {
+    const svg = renderPlasmidSVG(
+      { name: 'tiny', sequence: 'AT', circular: true, features: [] },
+      { showCutters: false, detectFeatures: false }
+    );
+    const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+    expect(labels.some((t) => t.includes('.'))).toBe(false);
+  });
+
+  it('keeps a multi-line qualifier out of the feature location', () => {
+    const gb = `LOCUS       demo        200 bp    DNA     circular SYN
+DEFINITION  a demo record that continues
+            onto a second line.
+FEATURES             Location/Qualifiers
+     CDS             1..50
+                     /label="a long label that wraps
+                     across two lines"
+                     /note="derived from parent vector, region
+                     100..190 of pXYZ"
+ORIGIN
+        1 atgcatgcat gcatgcatgc
+//`;
+    const rec = parseGenBank(gb);
+    expect(rec.definition).toBe('a demo record that continues onto a second line.');
+    expect(rec.features).toEqual([
+      {
+        name: 'a long label that wraps across two lines',
+        type: 'CDS',
+        start: 1,
+        end: 50,
+        strand: 1,
+      },
+    ]);
+  });
+
+  it('still joins a location split across lines', () => {
+    const gb = `LOCUS       demo        3000 bp    DNA     circular SYN
+FEATURES             Location/Qualifiers
+     misc_feature    join(2600..3000,
+                     1..40)
+                     /label="wrap"
+ORIGIN
+        1 atgcatgcat
+//`;
+    const [ft] = parseGenBank(gb).features!;
+    expect([ft.start, ft.end]).toEqual([2600, 40]);
+  });
+
+  it('reads a FASTA name after a space', () => {
+    expect(parsePlasmid('> pUC19 cloning vector\nATGCATGC\n').name).toBe('pUC19');
   });
 });

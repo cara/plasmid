@@ -14,14 +14,22 @@ export function parseGenBank(text: string): PlasmidRecord {
   let definition: string | undefined;
 
   // ---- header ----
+  let inDefinition = false;
   for (const l of lines) {
     if (l.startsWith('LOCUS')) {
+      inDefinition = false;
       const parts = l.split(/\s+/);
       if (parts[1]) name = parts[1];
       if (/\blinear\b/i.test(l)) circular = false;
       if (/\bcircular\b/i.test(l)) circular = true;
     } else if (l.startsWith('DEFINITION')) {
       definition = l.slice(10).trim();
+      inDefinition = true;
+    } else if (inDefinition && /^ {2,}\S/.test(l)) {
+      // DEFINITION wraps onto indented continuation lines.
+      definition = `${definition} ${l.trim()}`.trim();
+    } else if (/^\S/.test(l)) {
+      inDefinition = false;
     }
     if (l.startsWith('FEATURES') || l.startsWith('ORIGIN')) break;
   }
@@ -30,6 +38,10 @@ export function parseGenBank(text: string): PlasmidRecord {
   const features: Feature[] = [];
   let inFeatures = false;
   let cur: { location: string; type: string; quals: Record<string, string> } | null = null;
+  // Which qualifier (if any) is still open across continuation lines, and
+  // whether its value is a quoted string that has not been closed yet.
+  let curQual: string | null = null;
+  let qualOpen = false;
 
   const flush = () => {
     if (!cur) return;
@@ -60,13 +72,31 @@ export function parseGenBank(text: string): PlasmidRecord {
     if (featMatch && !isQual) {
       flush();
       cur = { type: featMatch[1], location: featMatch[2].trim(), quals: {} };
+      curQual = null;
+      qualOpen = false;
     } else if (cur) {
       const qm = /^ +\/(\w+)=?(.*)$/.exec(l);
       if (qm) {
-        cur.quals[qm[1]] = qm[2].replace(/^"/, '').replace(/"$/, '').trim();
-      } else if (/^ {21}\S/.test(l) && !l.includes('/')) {
-        // continuation of a multi-line location
-        cur.location += l.trim();
+        const raw = qm[2].trim();
+        curQual = qm[1];
+        // A value that opens with a quote runs until the closing quote, which
+        // may be several lines down.
+        qualOpen = raw.startsWith('"') && !(raw.length > 1 && raw.endsWith('"'));
+        cur.quals[curQual] = stripQuotes(raw);
+      } else if (/^ {21}\S/.test(l)) {
+        const text = l.trim();
+        if (qualOpen && curQual) {
+          // Continuation of a multi-line qualifier value. Appending this to the
+          // location instead (as an earlier version did) let a stray "100..190"
+          // in a /note rewrite the feature's coordinates.
+          const closes = text.endsWith('"');
+          cur.quals[curQual] = `${cur.quals[curQual]} ${stripQuotes(text)}`.trim();
+          if (closes) qualOpen = false;
+        } else if (curQual === null) {
+          // Continuation of a multi-line location — only possible before any
+          // qualifier has been seen for this feature.
+          cur.location += text;
+        }
       }
     }
   }
@@ -83,6 +113,11 @@ export function parseGenBank(text: string): PlasmidRecord {
   }
 
   return { name, sequence, circular, definition, features };
+}
+
+/** Drop the surrounding double quotes GenBank wraps free-text values in. */
+function stripQuotes(s: string): string {
+  return s.replace(/^"/, '').replace(/"$/, '').trim();
 }
 
 /** Parse a GenBank location string into 1-based inclusive start/end + strand. */
@@ -103,10 +138,12 @@ function parseLocation(loc: string): { start: number; end: number; strand: Stran
   if (ranges.length === 1) {
     return { start: ranges[0][0], end: ranges[0][1], strand };
   }
-  // join(): if it wraps the origin the first range ends high and the last
-  // starts low — keep start of first, end of last so start > end (wrap).
+  // join(): keep the start of the first range and the end of the last. When
+  // the location wraps the origin the last range ends below the first's start,
+  // which is exactly the start > end encoding the renderer expects; a spliced
+  // (multi-exon) join collapses to its full extent, introns included, which is
+  // the right read for a whole-molecule map.
   const first = ranges[0];
   const last = ranges[ranges.length - 1];
-  if (last[1] < first[0]) return { start: first[0], end: last[1], strand };
   return { start: first[0], end: last[1], strand };
 }

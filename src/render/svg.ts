@@ -124,11 +124,17 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
   const radius = size * 0.3;
   const circular = record.circular ?? true;
 
-  const seq = record.sequence.replace(/[^ACGTacgt]/g, '');
+  const seq = normaliseSequence(record.sequence);
   const length = seq.length;
 
   const parts: string[] = [];
   const defs: string[] = [];
+  // `<textPath href="#…">` resolves against the whole document, so two maps
+  // inlined on one page would both define "arc0" and the second map's labels
+  // would follow the first map's geometry. Namespace the ids per record, but
+  // derive the namespace from the content so the SVG stays byte-identical
+  // across hosts and runs (no counters, no randomness).
+  const idPrefix = opts.idPrefix ?? `p${svgIdToken(record, opts)}-`;
 
   // ---- backbone ----
   parts.push(
@@ -175,7 +181,11 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
       .map((ft, index) => ({ ft, index }))
       .filter((x) => x.ft.start >= 1 && x.ft.start <= length)
       .map(({ ft, index }) => {
-        const { startAngle, arcLen } = spanToArc(ft.start, ft.end, length, circular);
+        // Records in the wild carry ends past the sequence (truncated deposits,
+        // annotations copied from a longer parent). Clamp rather than trust, so
+        // the span can never exceed one turn of the circle.
+        const end = ft.end > length ? length : ft.end;
+        const { startAngle, arcLen } = spanToArc(ft.start, end, length, circular);
         return { feature: ft, index, startAngle, arcLen, lane: 0 };
       });
 
@@ -212,7 +222,7 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
 
       if (it.arcLen >= 26) {
         // On-arc curved label for wide features.
-        const id = `arc${defs.length}`;
+        const id = `${idPrefix}arc${defs.length}`;
         const bottom = midAngle > 90 && midAngle < 270;
         const a0 = it.startAngle;
         const a1 = it.startAngle + it.arcLen;
@@ -308,12 +318,50 @@ export function renderPlasmidSVG(record: PlasmidRecord, opts: RenderOptions = {}
   );
 }
 
-/** Choose a round ruler step (1k, 2k, 5k, …) yielding ~8–14 ticks. */
+/**
+ * Choose a round ruler step (1k, 2k, 5k, …) yielding ~8–14 ticks. Never
+ * returns a fractional step: a sub-10 bp sequence would otherwise be ruled at
+ * 0.5 bp intervals and, worse, accumulate float noise into the tick labels
+ * ("0.6000000000000001").
+ */
 function tickStep(length: number): number {
   const target = length / 10;
   const pow = Math.pow(10, Math.floor(Math.log10(target)));
-  for (const m of [1, 2, 5, 10]) if (m * pow >= target) return m * pow;
-  return 10 * pow;
+  for (const m of [1, 2, 5, 10]) if (m * pow >= target) return Math.max(1, m * pow);
+  return Math.max(1, 10 * pow);
+}
+
+/**
+ * Normalise a raw sequence for rendering: keep letters only (dropping the
+ * whitespace and column numbers that come with pasted GenBank/FASTA text) and
+ * fold every non-ACGT letter to N.
+ *
+ * Folding rather than deleting is what keeps feature coordinates honest.
+ * Ambiguity codes (N, R, Y, …) occupy a base position in the GenBank numbering
+ * that `Feature.start`/`end` refer to, so dropping them shortens the molecule
+ * and slides every downstream annotation out of place. As N they still can't
+ * match a restriction site or a common-feature probe, which is the correct
+ * reading of "unknown base".
+ */
+function normaliseSequence(sequence: string): string {
+  if (typeof sequence !== 'string') return '';
+  return sequence.replace(/[^A-Za-z]/g, '').toUpperCase().replace(/[^ACGT]/g, 'N');
+}
+
+/**
+ * A short, stable token identifying this render, used to namespace SVG element
+ * ids. FNV-1a over the fields that change between maps on the same page.
+ */
+function svgIdToken(record: PlasmidRecord, opts: RenderOptions): string {
+  const key = `${record.name ?? ''}|${(record.sequence ?? '').length}|${
+    record.features?.length ?? 0
+  }|${opts.title ?? ''}|${opts.size ?? 800}`;
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
 }
 
 /** Horizontal breathing room kept between a label and the canvas edge. */
